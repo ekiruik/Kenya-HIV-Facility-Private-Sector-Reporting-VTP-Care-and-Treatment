@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya HIV Facility Monthly Reporting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0C447C;--blue:#185FA5;--ltblue:#E6F1FB;--teal:#0F6E56;--ltteal:#E1F5EE;
+  --amber:#BA7517;--ltamber:#FAEEDA;--red:#A32D2D;--ltred:#FCEBEB;
+  --gray:#5F5E5A;--ltgray:#F1EFE8;--white:#FFFFFF;--border:#D3D1C7;
+  --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#F4F6F9;color:#1a1a1a;font-size:14px;min-height:100vh}
+
+/* ── Page shell ── */
+.page-header{background:var(--navy);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.page-header-inner{max-width:1100px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
+.logo-mark{width:44px;height:44px;flex-shrink:0}
+.header-text h1{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
+.header-text p{font-size:11px;color:#B5D4F4;margin-top:2px}
+.header-badge{margin-left:auto;background:rgba(255,255,255,.12);color:#B5D4F4;font-size:10px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);white-space:nowrap}
+
+.container{max-width:1100px;margin:0 auto;padding:24px}
+
+/* ── Cards ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.card-header{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.card-header.navy{background:var(--navy);border-bottom-color:rgba(255,255,255,.15)}
+.card-header.navy .card-title,.card-header.navy .card-sub{color:#fff}
+.card-header.navy .card-sub{color:#B5D4F4}
+.card-header.teal{background:var(--teal);border-bottom-color:rgba(255,255,255,.15)}
+.card-header.teal .card-title,.card-header.teal .card-sub{color:#fff}
+.card-header.teal .card-sub{color:#9FE1CB}
+.card-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-title{font-size:13px;font-weight:600;line-height:1.2}
+.card-sub{font-size:11px;margin-top:1px}
+.card-body{padding:16px 20px}
+
+/* ── Facility grid ── */
+.facility-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.field-group label{font-size:11px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
+.field-group input,.field-group select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);background:#fff;color:#1a1a1a;transition:border-color .15s}
+.field-group input:focus,.field-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.field-group select{cursor:pointer}
+
+/* ── Period selector ── */
+.period-bar{background:var(--ltgray);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.period-bar-label{font-size:11px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;margin-right:4px}
+.period-chip{font-size:11px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:#fff;color:var(--gray);transition:all .15s;user-select:none}
+.period-chip:hover{border-color:var(--blue);color:var(--blue)}
+.period-chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ── Matrix table ── */
+.matrix-scroll{overflow-x:auto}
+table.matrix{width:100%;border-collapse:collapse;min-width:600px}
+table.matrix th{font-size:10px;font-weight:500;padding:8px 10px;border:1px solid var(--border);text-align:center;white-space:nowrap;background:#F8F9FA;color:var(--gray);letter-spacing:.03em}
+table.matrix th.th-prog{width:80px;text-align:left}
+table.matrix th.th-ind{text-align:left;min-width:220px}
+table.matrix th.th-code{width:100px;font-family:var(--mono);font-size:9px}
+table.matrix th.th-month{width:76px;background:var(--ltblue);color:var(--navy);font-family:var(--mono)}
+table.matrix th.th-month.cur{background:var(--navy);color:#fff}
+table.matrix td{padding:4px 6px;border:1px solid var(--border);vertical-align:middle}
+table.matrix tr.sec-row td{background:var(--navy);color:#fff;font-size:10px;font-weight:600;padding:6px 10px;letter-spacing:.05em;text-transform:uppercase}
+table.matrix tr.sec-row.teal td{background:var(--teal)}
+td.td-prog{font-size:10px;font-weight:600;text-align:center;white-space:nowrap;border-radius:3px}
+td.td-prog.pmtct{background:var(--ltblue);color:var(--navy)}
+td.td-prog.ct{background:var(--ltteal);color:var(--teal)}
+td.td-ind{font-size:12px;color:#1a1a1a;padding-left:10px}
+td.td-code{font-family:var(--mono);font-size:9px;color:var(--gray);text-align:center;background:#F8F9FA}
+td.td-num{padding:3px 4px}
+input.num-inp{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 6px;font-size:12px;font-family:var(--mono);text-align:center;background:#fff;color:#1a1a1a;transition:border-color .15s}
+input.num-inp:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(24,95,165,.08)}
+input.num-inp.err{border-color:var(--red);background:var(--ltred)}
+td.td-rate{background:var(--ltteal);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);text-align:center}
+tr:hover td.td-num input{background:#F0F7FF}
+
+/* ── Summary KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-top:3px solid var(--border)}
+.kpi.navy{border-top-color:var(--navy)}
+.kpi.teal{border-top-color:var(--teal)}
+.kpi.amber{border-top-color:var(--amber)}
+.kpi.red{border-top-color:var(--red)}
+.kpi-label{font-size:10px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:600;color:#1a1a1a;font-family:var(--mono)}
+.kpi-sub{font-size:10px;color:var(--gray);margin-top:2px}
+
+/* ── After-submission preview ── */
+.long-wrap{overflow-x:auto}
+table.long-tbl{width:100%;border-collapse:collapse;min-width:700px;font-size:11px}
+table.long-tbl th{background:var(--navy);color:#fff;font-size:10px;font-weight:500;padding:7px 10px;text-align:left;white-space:nowrap;letter-spacing:.03em}
+table.long-tbl td{padding:5px 10px;border:1px solid var(--border);vertical-align:middle}
+table.long-tbl tr:nth-child(even) td{background:#F8F9FA}
+table.long-tbl tr.rate-row td{background:var(--ltteal);color:var(--teal);font-weight:500}
+.prog-badge{display:inline-block;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px}
+.prog-badge.pmtct{background:var(--ltblue);color:var(--navy)}
+.prog-badge.ct{background:var(--ltteal);color:var(--teal)}
+.code-cell{font-family:var(--mono);font-size:10px;color:var(--gray)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+.btn{font-size:12px;font-family:var(--font);padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .15s;border:1px solid var(--border);background:#fff;color:#1a1a1a}
+.btn:hover{background:var(--ltgray)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--blue)}
+.btn-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-teal:hover{background:#0a5544}
+.msg{font-size:11px;color:var(--gray);margin-left:auto}
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0}
+.tab{font-size:12px;font-weight:500;padding:10px 18px;cursor:pointer;border:none;background:none;color:var(--gray);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.tab-panel{padding:16px 20px}
+svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <svg class="logo-mark" viewBox="0 0 44 44" fill="none">
+      <rect width="44" height="44" rx="8" fill="rgba(255,255,255,0.12)"/>
+      <path d="M8 28 C8 20 16 14 22 14 C28 14 36 20 36 28" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="22" cy="20" r="4" fill="#9FE1CB"/>
+      <path d="M18 26 L26 26" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div class="header-text">
+      <h1>Kenya HIV Facility Monthly Reporting</h1>
+      <p>Ministry of Health — NASCOP · PMTCT &amp; Care and Treatment</p>
+    </div>
+    <div class="header-badge">2025 / 2026 Reporting</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI summary -->
+  <div class="kpi-row">
+    <div class="kpi navy"><div class="kpi-label">TX_CURR (latest period)</div><div class="kpi-val" id="kpi-curr">—</div><div class="kpi-sub">Clients on ART</div></div>
+    <div class="kpi teal"><div class="kpi-label">TX_NEW (latest period)</div><div class="kpi-val" id="kpi-new">—</div><div class="kpi-sub">Newly initiated</div></div>
+    <div class="kpi amber"><div class="kpi-label">PMTCT_STAT_D (latest)</div><div class="kpi-val" id="kpi-pmtct">—</div><div class="kpi-sub">Pregnant women tested</div></div>
+    <div class="kpi teal"><div class="kpi-label">VL Suppression (latest)</div><div class="kpi-val" id="kpi-vl">—</div><div class="kpi-sub">TX_PVLS_RATE</div></div>
+  </div>
+
+  <!-- Facility info -->
+  <div class="card">
+    <div class="card-header navy">
+      <div class="card-num">A</div>
+      <div><div class="card-title">Facility Identification</div><div class="card-sub">Complete all fields before entering indicator data</div></div>
+    </div>
+    <div class="card-body">
+      <div class="facility-grid">
+        <div class="field-group">
+          <label>County</label>
+          <select id="county">
+            <option value="">Select county…</option>
+            <option>Baringo</option><option>Bomet</option><option>Bungoma</option><option>Busia</option>
+            <option>Elgeyo Marakwet</option><option>Embu</option><option>Garissa</option>
+            <option>Homa Bay</option><option>Isiolo</option><option>Kajiado</option>
+            <option>Kakamega</option><option>Kericho</option><option>Kiambu</option>
+            <option>Kilifi</option><option>Kirinyaga</option><option>Kisii</option>
+            <option>Kisumu</option><option>Kitui</option><option>Kwale</option>
+            <option>Laikipia</option><option>Lamu</option><option>Machakos</option>
+            <option>Makueni</option><option>Mandera</option><option>Marsabit</option>
+            <option>Meru</option><option>Migori</option><option>Mombasa</option>
+            <option>Murang'a</option><option>Nairobi</option><option>Nakuru</option>
+            <option>Nandi</option><option>Narok</option><option>Nyamira</option>
+            <option>Nyandarua</option><option>Nyeri</option><option>Samburu</option>
+            <option>Siaya</option><option>Taita Taveta</option><option>Tana River</option>
+            <option>Tharaka Nithi</option><option>Trans Nzoia</option><option>Turkana</option>
+            <option>Uasin Gishu</option><option>Vihiga</option><option>Wajir</option>
+            <option>West Pokot</option>
+          </select>
+        </div>
+        <div class="field-group"><label>Sub-County</label><input type="text" id="subcounty" placeholder="Enter sub-county"></div>
+        <div class="field-group"><label>Facility Name</label><input type="text" id="facility" placeholder="Full official name"></div>
+        <div class="field-group"><label>MFL Code</label><input type="text" id="mfl" placeholder="e.g. 13045" pattern="[0-9]{4,6}"></div>
+        <div class="field-group"><label>Data Collector</label><input type="text" id="collector" placeholder="Full name"></div>
+        <div class="field-group">
+          <label>Designation</label>
+          <select id="designation">
+            <option value="">Select…</option>
+            <option>CCC In-Charge</option><option>PMTCT Nurse / Midwife</option>
+            <option>HTS Provider</option><option>Clinical Officer</option>
+            <option>M&amp;E Officer / Data Clerk</option><option>Facility In-Charge</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="period-bar">
+    <span class="period-bar-label">Periods:</span>
+    <div id="period-chips"></div>
+  </div>
+
+  <!-- PMTCT card -->
+  <div class="card">
+    <div class="card-header navy">
+      <div class="card-num">B</div>
+      <div><div class="card-title">Prevention of Mother-to-Child Transmission (PMTCT)</div><div class="card-sub">Enter monthly counts for each indicator</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="matrix-scroll">
+        <table class="matrix" id="tbl-pmtct"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Care & Treatment card -->
+  <div class="card">
+    <div class="card-header teal">
+      <div class="card-num" style="background:rgba(255,255,255,.2)">C</div>
+      <div><div class="card-title">HIV Care and Treatment</div><div class="card-sub">VL Suppression Rate is auto-calculated from C4 and C5</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="matrix-scroll">
+        <table class="matrix" id="tbl-ct"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- After-submission longitudinal preview -->
+  <div class="card">
+    <div class="card-header" style="background:#F8F9FA">
+      <div class="card-num" style="background:var(--navy);color:#fff">↓</div>
+      <div><div class="card-title" style="color:var(--navy)">Longitudinal View (after submission)</div><div class="card-sub" style="color:var(--gray)">Live preview — updates as you type · Program | Indicator | Period | Value</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="tab-bar" style="padding:0 16px;background:#F8F9FA">
+        <button class="tab active" onclick="switchTab('long')">Longitudinal rows</button>
+        <button class="tab" onclick="switchTab('csv')">CSV preview</button>
+      </div>
+      <div id="tab-long" class="tab-panel">
+        <div class="long-wrap"><table class="long-tbl" id="long-tbl"></table></div>
+      </div>
+      <div id="tab-csv" class="tab-panel" style="display:none">
+        <pre id="csv-preview" style="font-family:var(--mono);font-size:11px;color:#1a1a1a;white-space:pre-wrap;line-height:1.6"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="exportCSV()">
+      <svg class="icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export longitudinal CSV
+    </button>
+    <button class="btn btn-teal" onclick="copyLink()">
+      <svg class="icon"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      Copy share link
+    </button>
+    <button class="btn" onclick="clearAll()">
+      <svg class="icon"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      Clear data
+    </button>
+    <span class="msg" id="status"></span>
+  </div>
+
+</div>
+
+<script>
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function genPeriods(back,fwd){
+  const p=[],now=new Date();
+  for(let i=-back;i<=fwd;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    p.push({label:MN[d.getMonth()]+'-'+String(d.getFullYear()).slice(2),
+            month:d.getMonth()+1,year:d.getFullYear(),
+            key:d.getFullYear()*100+(d.getMonth()+1),
+            isCurrent:i===0});
+  }
+  return p;
+}
+const ALL_PERIODS=genPeriods(11,2);
+let active=ALL_PERIODS.filter((_,i)=>i>=6&&i<=11);
+
+const PMTCT_INDS=[
+  {label:'Pregnant women tested for HIV',           code:'PMTCT_STAT_D',type:'input'},
+  {label:'Pregnant women tested HIV positive',      code:'PMTCT_STAT',  type:'input'},
+  {label:'HIV+ pregnant women on lifelong ART',     code:'PMTCT_ART',   type:'input'},
+  {label:'HEI tested DNA PCR at 6–8 weeks',         code:'PMTCT_EID_6WK',type:'input'},
+  {label:'HEI tested DNA PCR at 12–18 months',      code:'PMTCT_EID_18M',type:'input'},
+];
+const CT_INDS=[
+  {label:'Clients currently on ART',                code:'TX_CURR',   type:'input'},
+  {label:'Clients newly initiated on ART',          code:'TX_NEW',    type:'input'},
+  {label:'Viral load samples taken',                code:'TX_PVLS_D', type:'input'},
+  {label:'Viral load results received',             code:'TX_PVLS_R', type:'input'},
+  {label:'Clients with suppressed VL (<1,000)',     code:'TX_PVLS',   type:'input'},
+  {label:'VL Suppression Rate (%)',                 code:'TX_PVLS_RATE',type:'calc'},
+];
+
+const DATA={};
+const k=(code,pk)=>code+'|'+pk;
+const get=(code,pk)=>DATA[k(code,pk)]??'';
+const set=(code,pk,v)=>DATA[k(code,pk)]=v;
+
+function calcRate(pk){
+  const a=parseFloat(get('TX_PVLS',pk));
+  const b=parseFloat(get('TX_PVLS_R',pk));
+  if(!isNaN(a)&&!isNaN(b)&&b>0) return (a/b*100).toFixed(1)+'%';
+  return '—';
+}
+
+function buildTable(tblId,inds,prog){
+  const tbl=document.getElementById(tblId);
+  tbl.innerHTML='';
+  const thead=tbl.createTHead();
+  const hr=thead.insertRow();
+  ['Program','Indicator','Code',...active.map(p=>p.label)].forEach((h,i)=>{
+    const th=document.createElement('th');
+    th.textContent=h;
+    if(i===0) th.className='th-prog';
+    else if(i===1) th.className='th-ind';
+    else if(i===2) th.className='th-code';
+    else{th.className='th-month'+(active[i-3].isCurrent?' cur':'');}
+    hr.appendChild(th);
+  });
+  const tbody=tbl.createTBody();
+  inds.forEach(ind=>{
+    const tr=tbody.insertRow();
+    const isRate=ind.type==='calc';
+    const cells=[
+      {text:prog,cls:'td-prog '+(prog==='PMTCT'?'pmtct':'ct')},
+      {text:ind.label,cls:'td-ind'},
+      {text:ind.code,cls:'td-code'},
+    ];
+    cells.forEach(c=>{
+      const td=tr.insertCell(); td.className=c.cls; td.textContent=c.text;
+    });
+    active.forEach(p=>{
+      const td=tr.insertCell();
+      if(isRate){
+        td.className='td-rate'; td.id='rate_'+ind.code+'_'+p.key;
+        td.textContent=calcRate(p.key);
+      } else {
+        td.className='td-num';
+        const inp=document.createElement('input');
+        inp.type='number'; inp.min='0'; inp.step='1'; inp.className='num-inp';
+        inp.value=get(ind.code,p.key);
+        inp.dataset.code=ind.code; inp.dataset.pk=p.key;
+        inp.oninput=function(){
+          const v=this.value.trim();
+          const ok=v===''||(/^\d+$/.test(v)&&Number(v)>=0);
+          this.classList.toggle('err',!ok);
+          if(ok){set(this.dataset.code,this.dataset.pk,v);refresh();}
+        };
+        td.appendChild(inp);
+      }
+    });
+  });
+}
+
+function refreshRates(){
+  [...PMTCT_INDS,...CT_INDS].filter(i=>i.type==='calc').forEach(ind=>{
+    active.forEach(p=>{
+      const el=document.getElementById('rate_'+ind.code+'_'+p.key);
+      if(el) el.textContent=calcRate(p.key);
+    });
+  });
+}
+
+function refreshKPIs(){
+  const lp=active[active.length-1];
+  if(!lp) return;
+  document.getElementById('kpi-curr').textContent=get('TX_CURR',lp.key)||'—';
+  document.getElementById('kpi-new').textContent=get('TX_NEW',lp.key)||'—';
+  document.getElementById('kpi-pmtct').textContent=get('PMTCT_STAT_D',lp.key)||'—';
+  document.getElementById('kpi-vl').textContent=calcRate(lp.key);
+}
+
+function buildLongRows(){
+  const rows=[];
+  const facility=document.getElementById('facility').value||'';
+  const county=document.getElementById('county').value||'';
+  const sub=document.getElementById('subcounty').value||'';
+  const mfl=document.getElementById('mfl').value||'';
+  const now=new Date().toISOString().slice(0,19).replace('T',' ');
+  const allInds=[...PMTCT_INDS.map(i=>({...i,prog:'PMTCT'})),
+                 ...CT_INDS.map(i=>({...i,prog:'HIV_CT'}))];
+  active.forEach(p=>{
+    allInds.forEach(ind=>{
+      let val;
+      if(ind.type==='calc'){
+        const a=parseFloat(get('TX_PVLS',p.key));
+        const b=parseFloat(get('TX_PVLS_R',p.key));
+        if(!isNaN(a)&&!isNaN(b)&&b>0) val=(a/b*100).toFixed(1);
+      } else {
+        val=get(ind.code,p.key);
+      }
+      if(val===''||val===undefined) return;
+      rows.push({ts:now,county,sub,facility,mfl,period:p.label,
+                 month:p.month,year:p.year,prog:ind.prog,
+                 label:ind.label,code:ind.code,val});
+    });
+  });
+  return rows;
+}
+
+function refreshLongTable(){
+  const rows=buildLongRows();
+  const tbl=document.getElementById('long-tbl');
+  tbl.innerHTML='';
+  if(rows.length===0){
+    const tr=tbl.insertRow();
+    const td=tr.insertCell();
+    td.colSpan=8;
+    td.style.cssText='padding:20px;text-align:center;color:#888;font-style:italic;font-size:12px';
+    td.textContent='Enter data above to see the longitudinal output here.';
+    return;
+  }
+  const thead=tbl.createTHead();
+  const hr=thead.insertRow();
+  ['County','Facility','MFL','Period','Program','Indicator','Code','Value'].forEach(h=>{
+    const th=document.createElement('th'); th.textContent=h; hr.appendChild(th);
+  });
+  const tbody=tbl.createTBody();
+  rows.forEach(r=>{
+    const tr=tbody.insertRow();
+    if(r.code==='TX_PVLS_RATE') tr.className='rate-row';
+    [r.county,r.facility,r.mfl,r.period].forEach(v=>{
+      const td=tr.insertCell(); td.textContent=v;
+    });
+    const ptd=tr.insertCell();
+    ptd.innerHTML='<span class="prog-badge '+(r.prog==='PMTCT'?'pmtct':'ct')+'">'+r.prog+'</span>';
+    const itd=tr.insertCell(); itd.textContent=r.label;
+    const ctd=tr.insertCell(); ctd.className='code-cell'; ctd.textContent=r.code;
+    const vtd=tr.insertCell();
+    vtd.textContent=r.code==='TX_PVLS_RATE'?r.val+'%':Number(r.val).toLocaleString();
+    vtd.style.textAlign='right';
+  });
+}
+
+function refreshCSV(){
+  const rows=buildLongRows();
+  if(rows.length===0){document.getElementById('csv-preview').textContent='No data yet.';return;}
+  const lines=[['Timestamp','County','Sub-County','Facility','MFL','Period','Month','Year','Program','Indicator','Code','Value'].join(',')];
+  rows.forEach(r=>{
+    lines.push([r.ts,r.county,r.sub,r.facility,r.mfl,r.period,r.month,r.year,
+                r.prog,'"'+r.label+'"',r.code,r.val].join(','));
+  });
+  document.getElementById('csv-preview').textContent=lines.slice(0,20).join('\n')+(lines.length>20?'\n… ('+lines.length+' rows total)':'');
+}
+
+function refresh(){refreshRates();refreshKPIs();refreshLongTable();refreshCSV();}
+
+function switchTab(t){
+  document.getElementById('tab-long').style.display=t==='long'?'':'none';
+  document.getElementById('tab-csv').style.display=t==='csv'?'':'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',(t==='long'&&i===0)||(t==='csv'&&i===1));
+  });
+}
+
+function buildChips(){
+  const c=document.getElementById('period-chips');
+  c.style.cssText='display:flex;gap:4px;flex-wrap:wrap';
+  c.innerHTML='';
+  ALL_PERIODS.forEach(p=>{
+    const btn=document.createElement('button');
+    btn.className='period-chip'+(active.find(a=>a.key===p.key)?' on':'');
+    btn.textContent=p.label;
+    btn.onclick=()=>{
+      const idx=active.findIndex(a=>a.key===p.key);
+      if(idx>-1){if(active.length>1) active.splice(idx,1);}
+      else{active.push(p); active.sort((a,b)=>a.key-b.key);}
+      renderAll();
+    };
+    c.appendChild(btn);
+  });
+}
+
+function renderAll(){
+  buildChips();
+  buildTable('tbl-pmtct',PMTCT_INDS,'PMTCT');
+  buildTable('tbl-ct',CT_INDS,'HIV_CT');
+  refresh();
+}
+
+function exportCSV(){
+  const rows=buildLongRows();
+  if(!rows.length){setMsg('No data to export.');return;}
+  const fac=document.getElementById('facility').value||'facility';
+  const lines=[['Timestamp','County','Sub-County','Facility','MFL','Period','Month','Year','Program','Indicator','Code','Value'].join(',')];
+  rows.forEach(r=>{
+    lines.push([r.ts,r.county,r.sub,r.facility,r.mfl,r.period,r.month,r.year,
+                r.prog,'"'+r.label+'"',r.code,r.val].join(','));
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='hiv_longitudinal_'+fac.replace(/\s+/g,'_')+'.csv';
+  a.click();
+  setMsg('Exported '+rows.length+' rows.');
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href).then(()=>setMsg('Link copied!'));
+}
+
+function clearAll(){
+  Object.keys(DATA).forEach(k=>delete DATA[k]);
+  renderAll();
+  setMsg('Data cleared.');
+}
+
+function setMsg(m){
+  const el=document.getElementById('status');
+  el.textContent=m;
+  setTimeout(()=>el.textContent='',3000);
+}
+
+renderAll();
+</script>
+</body>
+</html>
