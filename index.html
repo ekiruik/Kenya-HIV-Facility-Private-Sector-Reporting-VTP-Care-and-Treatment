@@ -815,7 +815,7 @@ function submitToSheets(){
   })
   .catch(err=>{
     btn.disabled=false;
-    btn.textContent='Submit to Google Sheets';
+    btn.textContent='Submit';
     setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
   });
 }
