@@ -244,19 +244,33 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
     </div>
   </div>
 
+  <!-- Confirmation banner (hidden until submit) -->
+  <div id="confirm-banner" style="display:none;background:#E1F5EE;border:1px solid #0F6E56;border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;gap:12px">
+    <svg width="24" height="24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <div>
+      <div style="font-weight:600;color:#0F6E56;font-size:13px">Data submitted successfully to Google Sheets</div>
+      <div style="font-size:12px;color:#085041;margin-top:2px">
+        Facility: <strong class="banner-fac"></strong> &nbsp;·&nbsp;
+        <strong class="banner-rows"></strong> rows saved &nbsp;·&nbsp;
+        Period: <strong class="banner-period"></strong>
+      </div>
+    </div>
+    <button onclick="document.getElementById('confirm-banner').style.display='none'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#0F6E56;font-size:18px">✕</button>
+  </div>
+
   <!-- Toolbar -->
   <div class="toolbar">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitToSheets()" style="background:#0F6E56;border-color:#0F6E56;font-size:13px;padding:9px 20px">
+      <svg class="icon"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+      Submit to Google Sheets
+    </button>
     <button class="btn btn-primary" onclick="exportCSV()">
       <svg class="icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Export longitudinal CSV
-    </button>
-    <button class="btn btn-teal" onclick="copyLink()">
-      <svg class="icon"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-      Copy share link
+      Export CSV
     </button>
     <button class="btn" onclick="clearAll()">
       <svg class="icon"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-      Clear data
+      Clear
     </button>
     <span class="msg" id="status"></span>
   </div>
@@ -264,6 +278,11 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
 </div>
 
 <script>
+// ── PASTE YOUR GOOGLE SHEETS WEB APP URL HERE ─────────────────────────────
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyTGFj_SxOQHDjqELkKTzZo--ZhEameJdu7DQEi2muFs5iNYmXHmwCn7nzPBT8Qtgiziw/exec';
+// e.g. 'https://script.google.com/macros/s/AKfycbx.../exec'
+// Get this after deploying the Apps Script as a Web App
+
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function genPeriods(back,fwd){
   const p=[],now=new Date();
@@ -469,7 +488,67 @@ function buildChips(){
       const idx=active.findIndex(a=>a.key===p.key);
       if(idx>-1){if(active.length>1) active.splice(idx,1);}
       else{active.push(p); active.sort((a,b)=>a.key-b.key);}
-      renderAll();
+      
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
+  }
+
+  if(!SHEETS_URL || SHEETS_URL==='YOUR_WEB_APP_URL_HERE'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
+  }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
+}
+
+renderAll();
     };
     c.appendChild(btn);
   });
@@ -505,7 +584,67 @@ function copyLink(){
 
 function clearAll(){
   Object.keys(DATA).forEach(k=>delete DATA[k]);
-  renderAll();
+  
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
+  }
+
+  if(!SHEETS_URL || SHEETS_URL==='YOUR_WEB_APP_URL_HERE'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
+  }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
+}
+
+renderAll();
   setMsg('Data cleared.');
 }
 
@@ -513,6 +652,66 @@ function setMsg(m){
   const el=document.getElementById('status');
   el.textContent=m;
   setTimeout(()=>el.textContent='',3000);
+}
+
+
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
+  }
+
+  if(!SHEETS_URL || SHEETS_URL==='YOUR_WEB_APP_URL_HERE'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
+  }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
 }
 
 renderAll();
