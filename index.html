@@ -8,21 +8,21 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --navy:#0C447C;--blue:#185FA5;--ltblue:#E6F1FB;--teal:#0F6E56;--ltteal:#E1F5EE;
+  --navy:#4A235A;--blue:#7D3C98;--ltblue:#F5EEF8;--teal:#6C3483;--ltteal:#EDE7F6;
   --amber:#BA7517;--ltamber:#FAEEDA;--red:#A32D2D;--ltred:#FCEBEB;
   --gray:#5F5E5A;--ltgray:#F1EFE8;--white:#FFFFFF;--border:#D3D1C7;
   --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font);background:#F4F6F9;color:#1a1a1a;font-size:14px;min-height:100vh}
+body{font-family:var(--font);background:#F9F5FC;color:#1a1a1a;font-size:14px;min-height:100vh}
 
 /* ── Page shell ── */
 .page-header{background:var(--navy);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.page-header-inner{max-width:1100px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px}
-.logo-mark{width:44px;height:44px;flex-shrink:0}
-.header-text h1{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
-.header-text p{font-size:11px;color:#B5D4F4;margin-top:2px}
-.header-badge{margin-left:auto;background:rgba(255,255,255,.12);color:#B5D4F4;font-size:10px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);white-space:nowrap}
+.page-header-inner{max-width:1100px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px;justify-content:space-between}
+
+.header-text{flex:1;text-align:center}.header-text h1{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
+.header-text p{font-size:11px;color:#E1BEE7;margin-top:2px}
+.header-badge{margin-left:auto;background:rgba(255,255,255,.12);color:#E1BEE7;font-size:10px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);white-space:nowrap}
 
 .container{max-width:1100px;margin:0 auto;padding:24px}
 
@@ -31,10 +31,10 @@ body{font-family:var(--font);background:#F4F6F9;color:#1a1a1a;font-size:14px;min
 .card-header{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
 .card-header.navy{background:var(--navy);border-bottom-color:rgba(255,255,255,.15)}
 .card-header.navy .card-title,.card-header.navy .card-sub{color:#fff}
-.card-header.navy .card-sub{color:#B5D4F4}
+.card-header.navy .card-sub{color:#E1BEE7}
 .card-header.teal{background:var(--teal);border-bottom-color:rgba(255,255,255,.15)}
 .card-header.teal .card-title,.card-header.teal .card-sub{color:#fff}
-.card-header.teal .card-sub{color:#9FE1CB}
+.card-header.teal .card-sub{color:#CE93D8}
 .card-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .card-title{font-size:13px;font-weight:600;line-height:1.2}
 .card-sub{font-size:11px;margin-top:1px}
@@ -79,9 +79,9 @@ input.num-inp.submitted{background:#F1EFE8;color:#9B9994;cursor:not-allowed;bord
 td.td-rate.submitted{background:#F1EFE8;color:#9B9994}
 td.td-num.submitted-cell{background:#F4F2EC}
 .period-submitted{position:relative}
-.period-submitted::after{content:'✓ Submitted';display:block;font-size:9px;color:#0F6E56;font-weight:600;text-align:center;margin-top:1px}
+.period-submitted::after{content:'✓ Submitted';display:block;font-size:9px;color:#6C3483;font-weight:600;text-align:center;margin-top:1px}
 th.th-month.submitted-hdr{background:#E8E6DF;color:#9B9994}
-.lock-icon{font-size:9px;color:#0F6E56;margin-left:3px}
+.lock-icon{font-size:9px;color:#6C3483;margin-left:3px}
 td.td-rate{background:var(--ltteal);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);text-align:center}
 tr:hover td.td-num input{background:#F0F7FF}
 
@@ -131,7 +131,7 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
     <svg class="logo-mark" viewBox="0 0 44 44" fill="none">
       <rect width="44" height="44" rx="8" fill="rgba(255,255,255,0.12)"/>
       <path d="M8 28 C8 20 16 14 22 14 C28 14 36 20 36 28" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <circle cx="22" cy="20" r="4" fill="#9FE1CB"/>
+      <circle cx="22" cy="20" r="4" fill="#CE93D8"/>
       <path d="M18 26 L26 26" stroke="white" stroke-width="2" stroke-linecap="round"/>
     </svg>
     <div class="header-text">
@@ -252,22 +252,22 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
   </div>
 
   <!-- Confirmation banner (hidden until submit) -->
-  <div id="confirm-banner" style="display:none;background:#E1F5EE;border:1px solid #0F6E56;border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;gap:12px">
-    <svg width="24" height="24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <div id="confirm-banner" style="display:none;background:#EDE7F6;border:1px solid #6C3483;border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;gap:12px">
+    <svg width="24" height="24" fill="none" stroke="#6C3483" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     <div>
-      <div style="font-weight:600;color:#0F6E56;font-size:13px">Data submitted successfully to Google Sheets</div>
-      <div style="font-size:12px;color:#085041;margin-top:2px">
+      <div style="font-weight:600;color:#6C3483;font-size:13px">Data submitted successfully to Google Sheets</div>
+      <div style="font-size:12px;color:#5B2C8D;margin-top:2px">
         Facility: <strong class="banner-fac"></strong> &nbsp;·&nbsp;
         <strong class="banner-rows"></strong> rows saved &nbsp;·&nbsp;
         Period: <strong class="banner-period"></strong>
       </div>
     </div>
-    <button onclick="document.getElementById('confirm-banner').style.display='none'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#0F6E56;font-size:18px">✕</button>
+    <button onclick="document.getElementById('confirm-banner').style.display='none'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#6C3483;font-size:18px">✕</button>
   </div>
 
   <!-- Toolbar -->
   <div class="toolbar">
-    <button class="btn btn-primary" id="submit-btn" onclick="submitToSheets()" style="background:#0F6E56;border-color:#0F6E56;font-size:13px;padding:9px 20px">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitToSheets()" style="background:#6C3483;border-color:#6C3483;font-size:13px;padding:9px 20px">
       <svg class="icon"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
       Submit
     </button>
