@@ -1,126 +1,908 @@
-// =============================================================================
-// Kenya HIV Facility Reporting — Google Sheets Backend v2
-// Paste in: Google Sheet → Extensions → Apps Script
-// Deploy as Web App: Execute as Me, Access: Anyone
-// =============================================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya HIV Facility Monthly Reporting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#4A235A;--blue:#7D3C98;--ltblue:#F5EEF8;--teal:#6C3483;--ltteal:#EDE7F6;
+  --amber:#BA7517;--ltamber:#FAEEDA;--red:#A32D2D;--ltred:#FCEBEB;
+  --gray:#5F5E5A;--ltgray:#F1EFE8;--white:#FFFFFF;--border:#D3D1C7;
+  --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#F9F5FC;color:#1a1a1a;font-size:14px;min-height:100vh}
 
-function doPost(e) {
-  try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Submissions') || ss.insertSheet('Submissions');
-    var data  = JSON.parse(e.postData.contents);
+/* ── Page shell ── */
+.page-header{padding:0;position:sticky;top:0;z-index:100;box-shadow:0 4px 16px rgba(74,35,90,.4);background:linear-gradient(135deg,#4A235A 0%,#6C3483 100%)}
+.page-header-inner{max-width:1100px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:20px;min-height:72px}
 
-    // Add headers if sheet is empty
-    if (sheet.getLastRow() === 0) {
-      var hdrs = ['Timestamp','County','Sub-County','Facility Name','MFL Code',
-                  'Data Collector','Designation','Period','Month','Year',
-                  'Program','Indicator','Code','Value'];
-      sheet.appendRow(hdrs);
-      sheet.getRange(1,1,1,hdrs.length)
-        .setBackground('#4A235A').setFontColor('#FFFFFF')
-        .setFontWeight('bold').setFontFamily('Arial');
-      sheet.setFrozenRows(1);
-      // Set column widths
-      [140,100,110,200,80,140,120,70,60,60,80,250,110,80]
-        .forEach(function(w,i){ sheet.setColumnWidth(i+1,w); });
+.header-text{flex:1;text-align:center;padding:0 12px;min-width:0}.header-text h1{font-size:15px;font-weight:600;color:#FFFFFF;line-height:1.3;white-space:nowrap;margin:0}.header-text p{font-size:11px;color:#E1BEE7;margin-top:3px;white-space:nowrap}
+.header-text p{font-size:11px;color:#E1BEE7;margin-top:2px}
+.header-badge{margin-left:auto;background:rgba(255,255,255,.12);color:#E1BEE7;font-size:10px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);white-space:nowrap}
+
+.container{max-width:1100px;margin:0 auto;padding:24px}
+
+/* ── Cards ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.card-header{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.card-header.navy{background:var(--navy);border-bottom-color:rgba(255,255,255,.15)}
+.card-header.navy .card-title,.card-header.navy .card-sub{color:#fff}
+.card-header.navy .card-sub{color:#E1BEE7}
+.card-header.teal{background:var(--teal);border-bottom-color:rgba(255,255,255,.15)}
+.card-header.teal .card-title,.card-header.teal .card-sub{color:#fff}
+.card-header.teal .card-sub{color:#CE93D8}
+.card-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-title{font-size:13px;font-weight:600;line-height:1.2}
+.card-sub{font-size:11px;margin-top:1px}
+.card-body{padding:16px 20px}
+
+/* ── Facility grid ── */
+.facility-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.field-group label{font-size:11px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
+.field-group input,.field-group select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);background:#fff;color:#1a1a1a;transition:border-color .15s}
+.field-group input:focus,.field-group select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.field-group select{cursor:pointer}
+
+/* ── Period selector ── */
+.period-bar{background:var(--ltgray);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.period-bar-label{font-size:11px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;margin-right:4px}
+.period-chip{font-size:11px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:#fff;color:var(--gray);transition:all .15s;user-select:none}
+.period-chip:hover{border-color:var(--blue);color:var(--blue)}
+.period-chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* ── Matrix table ── */
+.matrix-scroll{overflow-x:auto}
+table.matrix{width:100%;border-collapse:collapse;min-width:600px}
+table.matrix th{font-size:10px;font-weight:500;padding:8px 10px;border:1px solid var(--border);text-align:center;white-space:nowrap;background:#F8F9FA;color:var(--gray);letter-spacing:.03em}
+table.matrix th.th-prog{width:80px;text-align:left}
+table.matrix th.th-ind{text-align:left;min-width:220px}
+table.matrix th.th-code{width:100px;font-family:var(--mono);font-size:9px}
+table.matrix th.th-month{width:76px;background:var(--ltblue);color:var(--navy);font-family:var(--mono)}
+table.matrix th.th-month.cur{background:var(--navy);color:#fff}
+table.matrix td{padding:4px 6px;border:1px solid var(--border);vertical-align:middle}
+table.matrix tr.sec-row td{background:var(--navy);color:#fff;font-size:10px;font-weight:600;padding:6px 10px;letter-spacing:.05em;text-transform:uppercase}
+table.matrix tr.sec-row.teal td{background:var(--teal)}
+td.td-prog{font-size:10px;font-weight:600;text-align:center;white-space:nowrap;border-radius:3px}
+td.td-prog.pmtct{background:var(--ltblue);color:var(--navy)}
+td.td-prog.ct{background:var(--ltteal);color:var(--teal)}
+td.td-ind{font-size:12px;color:#1a1a1a;padding-left:10px}
+td.td-code{font-family:var(--mono);font-size:9px;color:var(--gray);text-align:center;background:#F8F9FA}
+td.td-num{padding:3px 4px}
+input.num-inp{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 6px;font-size:12px;font-family:var(--mono);text-align:center;background:#fff;color:#1a1a1a;transition:border-color .15s}
+input.num-inp:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(24,95,165,.08)}
+input.num-inp.err{border-color:var(--red);background:var(--ltred)}
+input.num-inp.submitted{background:#F1EFE8;color:#9B9994;cursor:not-allowed;border-color:#D3D1C7}
+td.td-rate.submitted{background:#F1EFE8;color:#9B9994}
+td.td-num.submitted-cell{background:#F4F2EC}
+.period-submitted{position:relative}
+.period-submitted::after{content:'✓ Submitted';display:block;font-size:9px;color:#6C3483;font-weight:600;text-align:center;margin-top:1px}
+th.th-month.submitted-hdr{background:#E8E6DF;color:#9B9994}
+.lock-icon{font-size:9px;color:#6C3483;margin-left:3px}
+td.td-rate{background:var(--ltteal);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);text-align:center}
+tr:hover td.td-num input{background:#F0F7FF}
+
+/* ── Summary KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;border-top:3px solid var(--border)}
+.kpi.navy{border-top-color:var(--navy)}
+.kpi.teal{border-top-color:var(--teal)}
+.kpi.amber{border-top-color:var(--amber)}
+.kpi.red{border-top-color:var(--red)}
+.kpi-label{font-size:10px;font-weight:500;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:600;color:#1a1a1a;font-family:var(--mono)}
+.kpi-sub{font-size:10px;color:var(--gray);margin-top:2px}
+
+/* ── After-submission preview ── */
+.long-wrap{overflow-x:auto}
+table.long-tbl{width:100%;border-collapse:collapse;min-width:700px;font-size:11px}
+table.long-tbl th{background:var(--navy);color:#fff;font-size:10px;font-weight:500;padding:7px 10px;text-align:left;white-space:nowrap;letter-spacing:.03em}
+table.long-tbl td{padding:5px 10px;border:1px solid var(--border);vertical-align:middle}
+table.long-tbl tr:nth-child(even) td{background:#F8F9FA}
+table.long-tbl tr.rate-row td{background:var(--ltteal);color:var(--teal);font-weight:500}
+.prog-badge{display:inline-block;font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px}
+.prog-badge.pmtct{background:var(--ltblue);color:var(--navy)}
+.prog-badge.ct{background:var(--ltteal);color:var(--teal)}
+.code-cell{font-family:var(--mono);font-size:10px;color:var(--gray)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+.btn{font-size:12px;font-family:var(--font);padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .15s;border:1px solid var(--border);background:#fff;color:#1a1a1a}
+.btn:hover{background:var(--ltgray)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--blue)}
+.btn-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-teal:hover{background:#0a5544}
+.msg{font-size:11px;color:var(--gray);margin-left:auto}
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0}
+.tab{font-size:12px;font-weight:500;padding:10px 18px;cursor:pointer;border:none;background:none;color:var(--gray);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.tab-panel{padding:16px 20px}
+svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+@media(max-width:640px){
+  .page-header-inner{padding:8px 12px;gap:8px}
+  .page-header-inner img{height:36px!important;max-width:90px!important}
+  .header-text h1{font-size:12px!important}
+  .header-text p{font-size:9px!important}
+  .header-badge{display:none}
+  .facility-grid{grid-template-columns:1fr 1fr!important}
+  .kpi-row{grid-template-columns:1fr 1fr!important}
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <img src="data:image/png;base64,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" alt="Ministry of Health Kenya" style="height:50px;width:auto;max-width:130px;flex-shrink:0;object-fit:contain">
+    <div class="header-text">
+      <h1>Kenya HIV Facility Monthly Reporting</h1>
+      <p>Ministry of Health · NASCOP · PMTCT &amp; HIV Care and Treatment</p>
+    </div>
+    <div class="header-badge">2022 – 2025 Reporting</div>
+    <img src="data:image/png;base64,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" alt="NASCOP" style="height:50px;width:auto;max-width:130px;flex-shrink:0;object-fit:contain">
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI summary -->
+  <div class="kpi-row">
+    <div class="kpi navy"><div class="kpi-label">TX_CURR (latest period)</div><div class="kpi-val" id="kpi-curr">—</div><div class="kpi-sub">Clients on ART</div></div>
+    <div class="kpi teal"><div class="kpi-label">TX_NEW (latest period)</div><div class="kpi-val" id="kpi-new">—</div><div class="kpi-sub">Newly initiated</div></div>
+    <div class="kpi amber"><div class="kpi-label">PMTCT_STAT_D (latest)</div><div class="kpi-val" id="kpi-pmtct">—</div><div class="kpi-sub">Pregnant women tested</div></div>
+    <div class="kpi teal"><div class="kpi-label">VL Suppression (latest)</div><div class="kpi-val" id="kpi-vl">—</div><div class="kpi-sub">TX_PVLS_RATE</div></div>
+  </div>
+
+  <!-- Facility info -->
+  <div class="card">
+    <div class="card-header navy">
+      <div class="card-num">A</div>
+      <div><div class="card-title">Facility Identification</div><div class="card-sub">Complete all fields before entering indicator data</div></div>
+    </div>
+    <div class="card-body">
+      <div class="facility-grid">
+        <div class="field-group">
+          <label>County</label>
+          <select id="county">
+            <option value="">Select county…</option>
+            <option>Baringo</option><option>Bomet</option><option>Bungoma</option><option>Busia</option>
+            <option>Elgeyo Marakwet</option><option>Embu</option><option>Garissa</option>
+            <option>Homa Bay</option><option>Isiolo</option><option>Kajiado</option>
+            <option>Kakamega</option><option>Kericho</option><option>Kiambu</option>
+            <option>Kilifi</option><option>Kirinyaga</option><option>Kisii</option>
+            <option>Kisumu</option><option>Kitui</option><option>Kwale</option>
+            <option>Laikipia</option><option>Lamu</option><option>Machakos</option>
+            <option>Makueni</option><option>Mandera</option><option>Marsabit</option>
+            <option>Meru</option><option>Migori</option><option>Mombasa</option>
+            <option>Murang'a</option><option>Nairobi</option><option>Nakuru</option>
+            <option>Nandi</option><option>Narok</option><option>Nyamira</option>
+            <option>Nyandarua</option><option>Nyeri</option><option>Samburu</option>
+            <option>Siaya</option><option>Taita Taveta</option><option>Tana River</option>
+            <option>Tharaka Nithi</option><option>Trans Nzoia</option><option>Turkana</option>
+            <option>Uasin Gishu</option><option>Vihiga</option><option>Wajir</option>
+            <option>West Pokot</option>
+          </select>
+        </div>
+        <div class="field-group"><label>Sub-County</label><input type="text" id="subcounty" placeholder="Enter sub-county"></div>
+        <div class="field-group"><label>Facility Name</label><input type="text" id="facility" placeholder="Full official name"></div>
+        <div class="field-group"><label>MFL Code</label><input type="text" id="mfl" placeholder="e.g. 13045" pattern="[0-9]{4,6}"></div>
+        <div class="field-group"><label>Data Collector</label><input type="text" id="collector" placeholder="Full name"></div>
+        <div class="field-group">
+          <label>Designation</label>
+          <select id="designation">
+            <option value="">Select…</option>
+            <option>CCC In-Charge</option><option>PMTCT Nurse / Midwife</option>
+            <option>HTS Provider</option><option>Clinical Officer</option>
+            <option>M&amp;E Officer / Data Clerk</option><option>Facility In-Charge</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="period-bar">
+    <span class="period-bar-label">Periods:</span>
+    <div id="period-chips"></div>
+  </div>
+
+  <!-- PMTCT card -->
+  <div class="card">
+    <div class="card-header navy">
+      <div class="card-num">B</div>
+      <div><div class="card-title">Prevention of Mother-to-Child Transmission (PMTCT)</div><div class="card-sub">Enter monthly counts for each indicator</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="matrix-scroll">
+        <table class="matrix" id="tbl-pmtct"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Care & Treatment card -->
+  <div class="card">
+    <div class="card-header teal">
+      <div class="card-num" style="background:rgba(255,255,255,.2)">C</div>
+      <div><div class="card-title">HIV Care and Treatment</div><div class="card-sub">VL Suppression Rate is auto-calculated from C4 and C5</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="matrix-scroll">
+        <table class="matrix" id="tbl-ct"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- After-submission longitudinal preview -->
+  <div class="card">
+    <div class="card-header" style="background:#F8F9FA">
+      <div class="card-num" style="background:var(--navy);color:#fff">↓</div>
+      <div><div class="card-title" style="color:var(--navy)">Longitudinal View (after submission)</div><div class="card-sub" style="color:var(--gray)">Live preview — updates as you type · Program | Indicator | Period | Value</div></div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="tab-bar" style="padding:0 16px;background:#F8F9FA">
+        <button class="tab active" onclick="switchTab('long')">Longitudinal rows</button>
+        <button class="tab" onclick="switchTab('csv')">CSV preview</button>
+      </div>
+      <div id="tab-long" class="tab-panel">
+        <div class="long-wrap"><table class="long-tbl" id="long-tbl"></table></div>
+      </div>
+      <div id="tab-csv" class="tab-panel" style="display:none">
+        <pre id="csv-preview" style="font-family:var(--mono);font-size:11px;color:#1a1a1a;white-space:pre-wrap;line-height:1.6"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation banner (hidden until submit) -->
+  <div id="confirm-banner" style="display:none;background:#EDE7F6;border:1px solid #6C3483;border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;gap:12px">
+    <svg width="24" height="24" fill="none" stroke="#6C3483" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <div>
+      <div style="font-weight:600;color:#6C3483;font-size:13px">Data submitted successfully to Google Sheets</div>
+      <div style="font-size:12px;color:#5B2C8D;margin-top:2px">
+        Facility: <strong class="banner-fac"></strong> &nbsp;·&nbsp;
+        <strong class="banner-rows"></strong> rows saved &nbsp;·&nbsp;
+        Period: <strong class="banner-period"></strong>
+      </div>
+    </div>
+    <button onclick="document.getElementById('confirm-banner').style.display='none'" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#6C3483;font-size:18px">✕</button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitToSheets()" style="background:#6C3483;border-color:#6C3483;font-size:13px;padding:9px 20px">
+      <svg class="icon"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+      Submit
+    </button>
+    <button class="btn btn-primary" onclick="exportCSV()">
+      <svg class="icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </button>
+    <button class="btn" onclick="checkSheetForDeletions()" title="Sync with Google Sheet — auto-unlock deleted rows" style="color:#5B2C8D;border-color:#5B2C8D">
+      <svg class="icon" stroke="#5B2C8D"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Sync with Sheet
+    </button>
+    <button class="btn" onclick="unlockAll()" title="Unlock all submitted data for editing" style="color:#BA7517;border-color:#BA7517">
+      <svg class="icon" stroke="#BA7517"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+      Unlock &amp; edit
+    </button>
+    <button class="btn" onclick="clearAll()">
+      <svg class="icon"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      Clear
+    </button>
+    <span class="msg" id="status"></span>
+  </div>
+
+</div>
+
+<script>
+// ── PASTE YOUR GOOGLE SHEETS WEB APP URL HERE ─────────────────────────────
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyVgmAJ5ZJSzrwmyKyHcMgKF3-lOeuMkFggoJ0VZ9xOrjMm6hWfqQ1UsWKv_JB3YVhjNA/exec';
+// e.g. 'https://script.google.com/macros/s/AKfycbx.../exec'
+// Get this after deploying the Apps Script as a Web App
+
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function genPeriods(){
+  const p=[];
+  // Fixed range: Jan-2022 to Dec-2025
+  for(let yr=2022;yr<=2025;yr++){
+    for(let mo=1;mo<=12;mo++){
+      const now=new Date();
+      const isCurrent=(yr===now.getFullYear()&&mo===now.getMonth()+1);
+      p.push({label:MN[mo-1]+'-'+String(yr).slice(2),
+              month:mo,year:yr,
+              key:yr*100+mo,
+              isCurrent:isCurrent});
     }
+  }
+  return p;
+}
+const ALL_PERIODS=genPeriods();
+// Default active: last 6 periods up to today
+const nowKey=(new Date().getFullYear())*100+(new Date().getMonth()+1);
+const pastPeriods=ALL_PERIODS.filter(p=>p.key<=nowKey);
+let active=pastPeriods.slice(-6);
 
-    var rows = data.rows;
-    rows.forEach(function(row) {
-      sheet.appendRow([
-        new Date(),
-        row.county      || '',
-        row.subcounty   || '',
-        row.facility    || '',
-        row.mfl         || '',
-        row.collector   || '',
-        row.designation || '',
-        row.period      || '',
-        row.month       || '',
-        row.year        || '',
-        row.program     || '',
-        row.indicator   || '',
-        row.code        || '',
-        row.value       || ''
-      ]);
+const PMTCT_INDS=[
+  {label:'Pregnant women tested for HIV',           code:'PMTCT_STAT_D',type:'input'},
+  {label:'Pregnant women tested HIV positive',      code:'PMTCT_STAT',  type:'input'},
+  {label:'HIV+ pregnant women on lifelong ART',     code:'PMTCT_ART',   type:'input'},
+  {label:'HEI tested DNA PCR at 6–8 weeks',         code:'PMTCT_EID_6WK',type:'input'},
+  {label:'HEI tested DNA PCR at 12–18 months',      code:'PMTCT_EID_18M',type:'input'},
+];
+const CT_INDS=[
+  {label:'Clients currently on ART',                code:'TX_CURR',   type:'input'},
+  {label:'Clients newly initiated on ART',          code:'TX_NEW',    type:'input'},
+  {label:'Viral load samples taken',                code:'TX_PVLS_D', type:'input'},
+  {label:'Viral load results received',             code:'TX_PVLS_R', type:'input'},
+  {label:'Clients with suppressed VL (<1,000)',     code:'TX_PVLS',   type:'input'},
+  {label:'VL Suppression Rate (%)',                 code:'TX_PVLS_RATE',type:'calc'},
+];
+
+const DATA={};
+// Load submitted state from localStorage (persists across page reloads)
+const SUBMITTED_KEY='hiv_submitted_v1';
+function loadSubmitted(){
+  try{ return JSON.parse(localStorage.getItem(SUBMITTED_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+function saveSubmitted(obj){
+  try{ localStorage.setItem(SUBMITTED_KEY, JSON.stringify(obj)); }
+  catch(e){}
+}
+const SUBMITTED=loadSubmitted();
+const sk=(pk)=>document.getElementById('facility').value.trim()+'|'+pk;
+const k=(code,pk)=>code+'|'+pk;
+const get=(code,pk)=>DATA[k(code,pk)]??'';
+const set=(code,pk,v)=>DATA[k(code,pk)]=v;
+
+function calcRate(pk){
+  const a=parseFloat(get('TX_PVLS',pk));
+  const b=parseFloat(get('TX_PVLS_R',pk));
+  if(!isNaN(a)&&!isNaN(b)&&b>0) return (a/b*100).toFixed(1)+'%';
+  return '—';
+}
+
+function buildTable(tblId,inds,prog){
+  const tbl=document.getElementById(tblId);
+  tbl.innerHTML='';
+  const thead=tbl.createTHead();
+  const hr=thead.insertRow();
+  ['Program','Indicator','Code',...active.map(p=>p.label)].forEach((h,i)=>{
+    const th=document.createElement('th');
+    th.textContent=h;
+    if(i===0) th.className='th-prog';
+    else if(i===1) th.className='th-ind';
+    else if(i===2) th.className='th-code';
+    else{th.className='th-month'+(active[i-3].isCurrent?' cur':'');}
+    hr.appendChild(th);
+  });
+  const tbody=tbl.createTBody();
+  inds.forEach(ind=>{
+    const tr=tbody.insertRow();
+    const isRate=ind.type==='calc';
+    const cells=[
+      {text:prog,cls:'td-prog '+(prog==='PMTCT'?'pmtct':'ct')},
+      {text:ind.label,cls:'td-ind'},
+      {text:ind.code,cls:'td-code'},
+    ];
+    cells.forEach(c=>{
+      const td=tr.insertCell(); td.className=c.cls; td.textContent=c.text;
+    });
+    active.forEach(p=>{
+      const td=tr.insertCell();
+      if(isRate){
+        td.className='td-rate'; td.id='rate_'+ind.code+'_'+p.key;
+        td.textContent=calcRate(p.key);
+      } else {
+        td.className='td-num';
+        const inp=document.createElement('input');
+        inp.type='number'; inp.min='0'; inp.step='1'; inp.className='num-inp';
+        inp.value=get(ind.code,p.key);
+        inp.dataset.code=ind.code; inp.dataset.pk=p.key;
+        inp.oninput=function(){
+          const v=this.value.trim();
+          const ok=v===''||(/^\d+$/.test(v)&&Number(v)>=0);
+          this.classList.toggle('err',!ok);
+          if(ok){set(this.dataset.code,this.dataset.pk,v);refresh();}
+        };
+        td.appendChild(inp);
+      }
+    });
+  });
+}
+
+function refreshRates(){
+  [...PMTCT_INDS,...CT_INDS].filter(i=>i.type==='calc').forEach(ind=>{
+    active.forEach(p=>{
+      const el=document.getElementById('rate_'+ind.code+'_'+p.key);
+      if(el) el.textContent=calcRate(p.key);
+    });
+  });
+}
+
+function refreshKPIs(){
+  const lp=active[active.length-1];
+  if(!lp) return;
+  document.getElementById('kpi-curr').textContent=get('TX_CURR',lp.key)||'—';
+  document.getElementById('kpi-new').textContent=get('TX_NEW',lp.key)||'—';
+  document.getElementById('kpi-pmtct').textContent=get('PMTCT_STAT_D',lp.key)||'—';
+  document.getElementById('kpi-vl').textContent=calcRate(lp.key);
+}
+
+function buildLongRows(){
+  const rows=[];
+  const facility=document.getElementById('facility').value||'';
+  const county=document.getElementById('county').value||'';
+  const sub=document.getElementById('subcounty').value||'';
+  const mfl=document.getElementById('mfl').value||'';
+  const now=new Date().toISOString().slice(0,19).replace('T',' ');
+  const allInds=[...PMTCT_INDS.map(i=>({...i,prog:'PMTCT'})),
+                 ...CT_INDS.map(i=>({...i,prog:'HIV_CT'}))];
+  active.forEach(p=>{
+    allInds.forEach(ind=>{
+      let val;
+      if(ind.type==='calc'){
+        const a=parseFloat(get('TX_PVLS',p.key));
+        const b=parseFloat(get('TX_PVLS_R',p.key));
+        if(!isNaN(a)&&!isNaN(b)&&b>0) val=(a/b*100).toFixed(1);
+      } else {
+        val=get(ind.code,p.key);
+      }
+      if(val===''||val===undefined) return;
+      rows.push({ts:now,county,sub,facility,mfl,period:p.label,
+                 month:p.month,year:p.year,prog:ind.prog,
+                 label:ind.label,code:ind.code,val});
+    });
+  });
+  return rows;
+}
+
+function refreshLongTable(){
+  const rows=buildLongRows();
+  const tbl=document.getElementById('long-tbl');
+  tbl.innerHTML='';
+  if(rows.length===0){
+    const tr=tbl.insertRow();
+    const td=tr.insertCell();
+    td.colSpan=8;
+    td.style.cssText='padding:20px;text-align:center;color:#888;font-style:italic;font-size:12px';
+    td.textContent='Enter data above to see the longitudinal output here.';
+    return;
+  }
+  const thead=tbl.createTHead();
+  const hr=thead.insertRow();
+  ['County','Facility','MFL','Period','Program','Indicator','Code','Value'].forEach(h=>{
+    const th=document.createElement('th'); th.textContent=h; hr.appendChild(th);
+  });
+  const tbody=tbl.createTBody();
+  rows.forEach(r=>{
+    const tr=tbody.insertRow();
+    if(r.code==='TX_PVLS_RATE') tr.className='rate-row';
+    [r.county,r.facility,r.mfl,r.period].forEach(v=>{
+      const td=tr.insertCell(); td.textContent=v;
+    });
+    const ptd=tr.insertCell();
+    ptd.innerHTML='<span class="prog-badge '+(r.prog==='PMTCT'?'pmtct':'ct')+'">'+r.prog+'</span>';
+    const itd=tr.insertCell(); itd.textContent=r.label;
+    const ctd=tr.insertCell(); ctd.className='code-cell'; ctd.textContent=r.code;
+    const vtd=tr.insertCell();
+    vtd.textContent=r.code==='TX_PVLS_RATE'?r.val+'%':Number(r.val).toLocaleString();
+    vtd.style.textAlign='right';
+  });
+}
+
+function refreshCSV(){
+  const rows=buildLongRows();
+  if(rows.length===0){document.getElementById('csv-preview').textContent='No data yet.';return;}
+  const lines=[['Timestamp','County','Sub-County','Facility','MFL','Period','Month','Year','Program','Indicator','Code','Value'].join(',')];
+  rows.forEach(r=>{
+    lines.push([r.ts,r.county,r.sub,r.facility,r.mfl,r.period,r.month,r.year,
+                r.prog,'"'+r.label+'"',r.code,r.val].join(','));
+  });
+  document.getElementById('csv-preview').textContent=lines.slice(0,20).join('\n')+(lines.length>20?'\n… ('+lines.length+' rows total)':'');
+}
+
+function refresh(){refreshRates();refreshKPIs();refreshLongTable();refreshCSV();}
+
+function switchTab(t){
+  document.getElementById('tab-long').style.display=t==='long'?'':'none';
+  document.getElementById('tab-csv').style.display=t==='csv'?'':'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',(t==='long'&&i===0)||(t==='csv'&&i===1));
+  });
+}
+
+function buildChips(){
+  const c=document.getElementById('period-chips');
+  c.style.cssText='display:flex;gap:4px;flex-wrap:wrap';
+  c.innerHTML='';
+  ALL_PERIODS.forEach(p=>{
+    const btn=document.createElement('button');
+    btn.className='period-chip'+(active.find(a=>a.key===p.key)?' on':'');
+    btn.textContent=p.label;
+    btn.onclick=()=>{
+      const idx=active.findIndex(a=>a.key===p.key);
+      if(idx>-1){if(active.length>1) active.splice(idx,1);}
+      else{active.push(p); active.sort((a,b)=>a.key-b.key);}
+      
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
+  }
+
+  if(!SHEETS_URL || SHEETS_URL==='https://script.google.com/macros/s/AKfycbyVgmAJ5ZJSzrwmyKyHcMgKF3-lOeuMkFggoJ0VZ9xOrjMm6hWfqQ1UsWKv_JB3YVhjNA/exec'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
+  }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted, grey them out, persist to localStorage
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+    saveSubmitted(SUBMITTED);
+
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
+}
+
+renderAll();
+    };
+    c.appendChild(btn);
+  });
+}
+
+function renderAll(){
+  buildChips();
+  buildTable('tbl-pmtct',PMTCT_INDS,'PMTCT');
+  buildTable('tbl-ct',CT_INDS,'HIV_CT');
+  refresh();
+  restoreSubmittedState();
+}
+
+function exportCSV(){
+  const rows=buildLongRows();
+  if(!rows.length){setMsg('No data to export.');return;}
+  const fac=document.getElementById('facility').value||'facility';
+  const lines=[['Timestamp','County','Sub-County','Facility','MFL','Period','Month','Year','Program','Indicator','Code','Value'].join(',')];
+  rows.forEach(r=>{
+    lines.push([r.ts,r.county,r.sub,r.facility,r.mfl,r.period,r.month,r.year,
+                r.prog,'"'+r.label+'"',r.code,r.val].join(','));
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='hiv_longitudinal_'+fac.replace(/\s+/g,'_')+'.csv';
+  a.click();
+  setMsg('Exported '+rows.length+' rows.');
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href).then(()=>setMsg('Link copied!'));
+}
+
+function unlockAll(){
+  if(!confirm('Unlock submitted data for editing? You will need to resubmit after making changes.')) return;
+  Object.keys(SUBMITTED).forEach(k=>delete SUBMITTED[k]);
+  saveSubmitted(SUBMITTED);
+  document.querySelectorAll('input.num-inp.submitted').forEach(inp=>{
+    inp.classList.remove('submitted');
+    inp.readOnly=false;
+    inp.title='';
+  });
+  document.querySelectorAll('td.submitted-cell').forEach(td=>td.classList.remove('submitted-cell'));
+  document.querySelectorAll('td.td-rate.submitted').forEach(td=>td.classList.remove('submitted'));
+  document.querySelectorAll('th.th-month.submitted-hdr').forEach(th=>{
+    th.classList.remove('submitted-hdr');
+    const icon=th.querySelector('.lock-icon');
+    if(icon) icon.remove();
+  });
+  setMsg('🔓 Data unlocked — make your changes then resubmit.');
+}
+
+function clearAll(){
+  Object.keys(DATA).forEach(k=>delete DATA[k]);
+  
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
+  }
+
+  if(!SHEETS_URL || SHEETS_URL==='https://script.google.com/macros/s/AKfycbyVgmAJ5ZJSzrwmyKyHcMgKF3-lOeuMkFggoJ0VZ9xOrjMm6hWfqQ1UsWKv_JB3YVhjNA/exec'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
+  }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted, grey them out, persist to localStorage
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+    saveSubmitted(SUBMITTED);
+
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
+}
+
+renderAll();
+  setMsg('Data cleared.');
+}
+
+function greyOutPeriod(pk){
+  // Grey out all input cells for this period column
+  const allInds=[...PMTCT_INDS,...CT_INDS];
+  allInds.forEach(ind=>{
+    if(ind.type==='input'){
+      const inp=document.querySelector('input.num-inp[data-code="'+ind.code+'"][data-pk="'+pk+'"]');
+      if(inp){
+        inp.classList.add('submitted');
+        inp.readOnly=true;
+        inp.title='Already submitted — data locked';
+      }
+      if(inp && inp.parentElement) inp.parentElement.classList.add('submitted-cell');
+    }
+    if(ind.type==='calc'){
+      const el=document.getElementById('rate_'+ind.code+'_'+pk);
+      if(el) el.classList.add('submitted');
+    }
+  });
+  // Grey out the column header
+  document.querySelectorAll('th.th-month').forEach(th=>{
+    if(th.textContent===active.find(p=>p.key==pk)?.label){
+      th.classList.add('submitted-hdr');
+      if(!th.querySelector('.lock-icon')){
+        const icon=document.createElement('span');
+        icon.className='lock-icon'; icon.textContent=' 🔒';
+        th.appendChild(icon);
+      }
+    }
+  });
+}
+
+function restoreSubmittedState(){
+  // Re-apply grey-out after table re-render
+  active.forEach(p=>{
+    if(SUBMITTED[sk(p.key)]) greyOutPeriod(p.key);
+  });
+}
+
+// ── Check Google Sheet — auto-unlock periods deleted from Sheet ──────────────
+function checkSheetForDeletions(){
+  if(!SHEETS_URL||SHEETS_URL==='https://script.google.com/macros/s/AKfycbyVgmAJ5ZJSzrwmyKyHcMgKF3-lOeuMkFggoJ0VZ9xOrjMm6hWfqQ1UsWKv_JB3YVhjNA/exec'){
+    setMsg('⚠ Configure SHEETS_URL first.'); return;
+  }
+  const fac=document.getElementById('facility').value.trim();
+  if(!fac){ setMsg('Enter facility name first.'); return; }
+
+  setMsg('🔄 Checking Google Sheet…');
+
+  // Use a JSONP-style script tag to bypass CORS (works with doGet returning JSON)
+  const callbackName='_sheetCheck_'+Date.now();
+  const url=SHEETS_URL+'?action=check&facility='+encodeURIComponent(fac)+'&callback='+callbackName;
+
+  window[callbackName]=function(data){
+    document.head.removeChild(script);
+    delete window[callbackName];
+    const sheetPeriods=data.submitted||[];
+
+    // Find periods that WE think are submitted but Sheet no longer has
+    let unlocked=0;
+    Object.keys(SUBMITTED).forEach(function(key){
+      const parts=key.split('|');
+      const storedFac=parts[0], pk=parseInt(parts[1]);
+      if(storedFac!==fac) return;
+      const period=ALL_PERIODS.find(p=>p.key===pk);
+      if(!period) return;
+      if(sheetPeriods.indexOf(period.label)===-1){
+        // Deleted from Sheet — unlock this period
+        delete SUBMITTED[key];
+        unlocked++;
+      }
     });
 
-    // Alternate row shading
-    var last = sheet.getLastRow();
-    var start = last - rows.length + 1;
-    for (var r = start; r <= last; r++) {
-      var bg = r % 2 === 0 ? '#F5EEF8' : '#FFFFFF';
-      sheet.getRange(r, 1, 1, 14).setBackground(bg);
+    saveSubmitted(SUBMITTED);
+    renderAll(); // re-render to apply unlock
+    if(unlocked>0){
+      setMsg('🔓 '+unlocked+' period(s) unlocked — data was deleted from Google Sheet.');
+    } else {
+      setMsg('✅ All submitted periods are still in Google Sheet.');
     }
+  };
 
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        status: 'success',
-        rows_saved: rows.length,
-        facility: rows[0] ? rows[0].facility : ''
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+  const script=document.createElement('script');
+  script.src=url;
+  script.onerror=function(){
+    document.head.removeChild(script);
+    setMsg('ℹ️ Could not reach Google Sheet. Use "Unlock & edit" manually if needed.');
+  };
+  document.head.appendChild(script);
+}
 
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({status:'error',message:err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+function setMsg(m){
+  const el=document.getElementById('status');
+  el.textContent=m;
+  setTimeout(()=>el.textContent='',3000);
+}
+
+
+function submitToSheets(){
+  const county  = document.getElementById('county').value;
+  const sub     = document.getElementById('subcounty').value;
+  const fac     = document.getElementById('facility').value;
+  const mfl     = document.getElementById('mfl').value;
+  const col     = document.getElementById('collector').value;
+  const des     = document.getElementById('designation').value;
+
+  if(!county||!sub||!fac||!mfl||!col){
+    setMsg('⚠ Please fill in all facility fields before submitting.');
+    return;
   }
-}
 
-// =============================================================================
-// doGet — called by form to check if facility+period data still exists
-// URL: WEBAPP_URL?action=check&facility=FACILITY_NAME
-// Returns JSON: { submitted: ["Jan-24","Feb-24",...] }
-// =============================================================================
-function doGet(e) {
-  try {
-    var action   = e.parameter.action   || '';
-    var facility = e.parameter.facility || '';
-
-    if (action === 'check' && facility) {
-      var ss    = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = ss.getSheetByName('Submissions');
-      if (!sheet || sheet.getLastRow() <= 1) {
-        return ContentService
-          .createTextOutput(JSON.stringify({submitted:[]}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-
-      var data = sheet.getDataRange().getValues();
-      var submitted = [];
-      // Col 3 = Facility Name (0-indexed), Col 7 = Period
-      for (var r = 1; r < data.length; r++) {
-        if (data[r][3] && data[r][3].toString().trim() === facility.trim()) {
-          var period = data[r][7] ? data[r][7].toString().trim() : '';
-          if (period && submitted.indexOf(period) === -1) {
-            submitted.push(period);
-          }
-        }
-      }
-
-      return ContentService
-        .createTextOutput(JSON.stringify({submitted: submitted, facility: facility}))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({status:'ok'}))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({status:'error',message:err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+  if(!SHEETS_URL || SHEETS_URL==='https://script.google.com/macros/s/AKfycbyVgmAJ5ZJSzrwmyKyHcMgKF3-lOeuMkFggoJ0VZ9xOrjMm6hWfqQ1UsWKv_JB3YVhjNA/exec'){
+    setMsg('⚠ Web App URL not configured. See setup instructions.');
+    return;
   }
+
+  const rows = buildLongRows();
+  if(rows.length===0){
+    setMsg('⚠ No data to submit. Enter values first.');
+    return;
+  }
+
+  // Add collector/designation to each row
+  const enriched = rows.map(r=>({...r,
+    collector:col, designation:des
+  }));
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  setMsg('Sending '+rows.length+' rows to Google Sheets…');
+
+  fetch(SHEETS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rows:enriched})
+  })
+  .then(()=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted, grey them out, persist to localStorage
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+    saveSubmitted(SUBMITTED);
+
+    // Show confirmation banner
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display='flex';
+    banner.querySelector('.banner-fac').textContent = fac;
+    banner.querySelector('.banner-rows').textContent = rows.length;
+    banner.querySelector('.banner-period').textContent = 
+      rows[0].period + (rows.length>1?' – '+rows[rows.length-2].period:'');
+  })
+  .catch(err=>{
+    btn.disabled=false;
+    btn.textContent='Submit to Google Sheets';
+    setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
+  });
 }
 
-// =============================================================================
-// testSetup — run once to verify sheet is ready
-// =============================================================================
-function testSetup() {
-  var ss    = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Submissions') || ss.insertSheet('Submissions');
-  Logger.log('Sheet: ' + sheet.getName());
-  Logger.log('URL:   ' + ss.getUrl());
-}
+renderAll();
+</script>
+</body>
+</html>
