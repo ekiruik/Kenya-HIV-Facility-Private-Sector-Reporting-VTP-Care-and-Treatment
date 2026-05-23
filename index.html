@@ -75,6 +75,13 @@ td.td-num{padding:3px 4px}
 input.num-inp{width:100%;border:1px solid var(--border);border-radius:4px;padding:5px 6px;font-size:12px;font-family:var(--mono);text-align:center;background:#fff;color:#1a1a1a;transition:border-color .15s}
 input.num-inp:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 2px rgba(24,95,165,.08)}
 input.num-inp.err{border-color:var(--red);background:var(--ltred)}
+input.num-inp.submitted{background:#F1EFE8;color:#9B9994;cursor:not-allowed;border-color:#D3D1C7}
+td.td-rate.submitted{background:#F1EFE8;color:#9B9994}
+td.td-num.submitted-cell{background:#F4F2EC}
+.period-submitted{position:relative}
+.period-submitted::after{content:'✓ Submitted';display:block;font-size:9px;color:#0F6E56;font-weight:600;text-align:center;margin-top:1px}
+th.th-month.submitted-hdr{background:#E8E6DF;color:#9B9994}
+.lock-icon{font-size:9px;color:#0F6E56;margin-left:3px}
 td.td-rate{background:var(--ltteal);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);text-align:center}
 tr:hover td.td-num input{background:#F0F7FF}
 
@@ -248,7 +255,7 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
   <div id="confirm-banner" style="display:none;background:#E1F5EE;border:1px solid #0F6E56;border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;gap:12px">
     <svg width="24" height="24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     <div>
-      <div style="font-weight:600;color:#0F6E56;font-size:13px">Data submitted</div>
+      <div style="font-weight:600;color:#0F6E56;font-size:13px">Data submitted successfully to Google Sheets</div>
       <div style="font-size:12px;color:#085041;margin-top:2px">
         Facility: <strong class="banner-fac"></strong> &nbsp;·&nbsp;
         <strong class="banner-rows"></strong> rows saved &nbsp;·&nbsp;
@@ -260,13 +267,17 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
 
   <!-- Toolbar -->
   <div class="toolbar">
-    <button class="btn btn-primary" id="submit-btn" onclick="submit()" style="background:#0F6E56;border-color:#0F6E56;font-size:13px;padding:9px 20px">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitToSheets()" style="background:#0F6E56;border-color:#0F6E56;font-size:13px;padding:9px 20px">
       <svg class="icon"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-      Submit 
+      Submit
     </button>
     <button class="btn btn-primary" onclick="exportCSV()">
       <svg class="icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Export CSV
+    </button>
+    <button class="btn" onclick="unlockAll()" title="Unlock submitted data for editing" style="color:#BA7517;border-color:#BA7517">
+      <svg class="icon" stroke="#BA7517"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+      Unlock &amp; edit
     </button>
     <button class="btn" onclick="clearAll()">
       <svg class="icon"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
@@ -279,7 +290,7 @@ svg.icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;str
 
 <script>
 // ── PASTE YOUR GOOGLE SHEETS WEB APP URL HERE ─────────────────────────────
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyTGFj_SxOQHDjqELkKTzZo--ZhEameJdu7DQEi2muFs5iNYmXHmwCn7nzPBT8Qtgiziw/exec';
+const SHEETS_URL = 'YOUR_WEB_APP_URL_HERE';
 // e.g. 'https://script.google.com/macros/s/AKfycbx.../exec'
 // Get this after deploying the Apps Script as a Web App
 
@@ -315,6 +326,8 @@ const CT_INDS=[
 ];
 
 const DATA={};
+const SUBMITTED={}; // tracks which period+facility combos have been submitted
+const sk=(pk)=>document.getElementById('facility').value+'|'+pk;
 const k=(code,pk)=>code+'|'+pk;
 const get=(code,pk)=>DATA[k(code,pk)]??'';
 const set=(code,pk,v)=>DATA[k(code,pk)]=v;
@@ -489,7 +502,7 @@ function buildChips(){
       if(idx>-1){if(active.length>1) active.splice(idx,1);}
       else{active.push(p); active.sort((a,b)=>a.key-b.key);}
       
-function submit(){
+function submitToSheets(){
   const county  = document.getElementById('county').value;
   const sub     = document.getElementById('subcounty').value;
   const fac     = document.getElementById('facility').value;
@@ -531,8 +544,20 @@ function submit(){
   })
   .then(()=>{
     btn.disabled=false;
-    btn.textContent='Submit';
+    btn.textContent='Submit to Google Sheets';
     setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted and grey them out
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+
     // Show confirmation banner
     const banner = document.getElementById('confirm-banner');
     banner.style.display='flex';
@@ -543,7 +568,7 @@ function submit(){
   })
   .catch(err=>{
     btn.disabled=false;
-    btn.textContent='Submit';
+    btn.textContent='Submit to Google Sheets';
     setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
   });
 }
@@ -559,6 +584,7 @@ function renderAll(){
   buildTable('tbl-pmtct',PMTCT_INDS,'PMTCT');
   buildTable('tbl-ct',CT_INDS,'HIV_CT');
   refresh();
+  restoreSubmittedState();
 }
 
 function exportCSV(){
@@ -582,10 +608,28 @@ function copyLink(){
   navigator.clipboard.writeText(window.location.href).then(()=>setMsg('Link copied!'));
 }
 
+function unlockAll(){
+  if(!confirm('Unlock submitted data for editing? You will need to resubmit after making changes.')) return;
+  Object.keys(SUBMITTED).forEach(k=>delete SUBMITTED[k]);
+  document.querySelectorAll('input.num-inp.submitted').forEach(inp=>{
+    inp.classList.remove('submitted');
+    inp.readOnly=false;
+    inp.title='';
+  });
+  document.querySelectorAll('td.submitted-cell').forEach(td=>td.classList.remove('submitted-cell'));
+  document.querySelectorAll('td.td-rate.submitted').forEach(td=>td.classList.remove('submitted'));
+  document.querySelectorAll('th.th-month.submitted-hdr').forEach(th=>{
+    th.classList.remove('submitted-hdr');
+    const icon=th.querySelector('.lock-icon');
+    if(icon) icon.remove();
+  });
+  setMsg('🔓 Data unlocked — make your changes then resubmit.');
+}
+
 function clearAll(){
   Object.keys(DATA).forEach(k=>delete DATA[k]);
   
-function submit(){
+function submitToSheets(){
   const county  = document.getElementById('county').value;
   const sub     = document.getElementById('subcounty').value;
   const fac     = document.getElementById('facility').value;
@@ -627,8 +671,20 @@ function submit(){
   })
   .then(()=>{
     btn.disabled=false;
-    btn.textContent='Submit';
+    btn.textContent='Submit to Google Sheets';
     setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted and grey them out
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+
     // Show confirmation banner
     const banner = document.getElementById('confirm-banner');
     banner.style.display='flex';
@@ -639,14 +695,51 @@ function submit(){
   })
   .catch(err=>{
     btn.disabled=false;
-    btn.textContent='Submit
-';
+    btn.textContent='Submit to Google Sheets';
     setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
   });
 }
 
 renderAll();
   setMsg('Data cleared.');
+}
+
+function greyOutPeriod(pk){
+  // Grey out all input cells for this period column
+  const allInds=[...PMTCT_INDS,...CT_INDS];
+  allInds.forEach(ind=>{
+    if(ind.type==='input'){
+      const inp=document.querySelector('input.num-inp[data-code="'+ind.code+'"][data-pk="'+pk+'"]');
+      if(inp){
+        inp.classList.add('submitted');
+        inp.readOnly=true;
+        inp.title='Already submitted — data locked';
+      }
+      if(inp && inp.parentElement) inp.parentElement.classList.add('submitted-cell');
+    }
+    if(ind.type==='calc'){
+      const el=document.getElementById('rate_'+ind.code+'_'+pk);
+      if(el) el.classList.add('submitted');
+    }
+  });
+  // Grey out the column header
+  document.querySelectorAll('th.th-month').forEach(th=>{
+    if(th.textContent===active.find(p=>p.key==pk)?.label){
+      th.classList.add('submitted-hdr');
+      if(!th.querySelector('.lock-icon')){
+        const icon=document.createElement('span');
+        icon.className='lock-icon'; icon.textContent=' 🔒';
+        th.appendChild(icon);
+      }
+    }
+  });
+}
+
+function restoreSubmittedState(){
+  // Re-apply grey-out after table re-render
+  active.forEach(p=>{
+    if(SUBMITTED[sk(p.key)]) greyOutPeriod(p.key);
+  });
 }
 
 function setMsg(m){
@@ -698,8 +791,20 @@ function submitToSheets(){
   })
   .then(()=>{
     btn.disabled=false;
-    btn.textContent='Submit';
+    btn.textContent='Submit to Google Sheets';
     setMsg('✅ Submitted successfully — '+rows.length+' rows saved for '+fac+'.');
+
+    // Mark all active periods as submitted and grey them out
+    active.forEach(p=>{
+      const hasData = [...PMTCT_INDS,...CT_INDS]
+        .filter(i=>i.type==='input')
+        .some(i=>get(i.code,p.key)!=='');
+      if(hasData){
+        SUBMITTED[sk(p.key)]=true;
+        greyOutPeriod(p.key);
+      }
+    });
+
     // Show confirmation banner
     const banner = document.getElementById('confirm-banner');
     banner.style.display='flex';
@@ -710,7 +815,7 @@ function submitToSheets(){
   })
   .catch(err=>{
     btn.disabled=false;
-    btn.textContent='Submit';
+    btn.textContent='Submit to Google Sheets';
     setMsg('❌ Error: '+err.message+'. Check your Web App URL.');
   });
 }
